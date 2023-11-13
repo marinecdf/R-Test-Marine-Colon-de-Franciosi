@@ -1,6 +1,8 @@
 ---
 title: "R-Test"
 author: "Marine de Franciosi"
+date:   "11/09/2023"
+format: gfm
 ---
 
 # Loading packages and data
@@ -9,7 +11,7 @@ author: "Marine de Franciosi"
 pacman::p_load(tidyverse, readr, waldo,
                skimr, data.table, matrixStats, 
                labelled, testit, ggthemes, purrr, 
-               kableExtra)
+               kableExtra, knitr)
 ```
 
 Loading dataset as instructed:
@@ -57,7 +59,7 @@ wdi_summ_out_repl <- wdi %>%
 
 ```{r}
 wdi_summ_out_repl %>% 
-  kable(align = "c") %>% 
+  kable(align = "c", format = "markdown") %>% 
   kable_styling(bootstrap_options = c("striped", "hover"), 
                 full_width = TRUE) %>%
   scroll_box(width = "600px", height = "600px")
@@ -147,7 +149,7 @@ labelled::var_label(wdi_agg_out_repl) <-
 
 ```{r}
 head(wdi_agg_out_repl, 100) %>% 
-  kable(align = "c") %>% 
+  kable(align = "c", format = "markdown") %>% 
   kable_styling(bootstrap_options = c("striped", "hover"), 
                 full_width = TRUE) %>%
   scroll_box(width = "600px", height = "600px")
@@ -236,7 +238,7 @@ wdi_outliers_out_repl <- wdi_outliers_out_repl %>%
 
 ```{r}
 head(wdi_outliers_out_repl, 200) %>% 
-  kable(align = "c") %>% 
+  kable(align = "c", format = "markdown") %>% 
   kable_styling(bootstrap_options = c("striped", "hover"), 
                 full_width = TRUE) %>%
   scroll_box(width = "600px", height = "600px")
@@ -401,7 +403,7 @@ pov_out_repl <- pov_out %>%
 
 ```{r}
 pov_out_repl %>% 
-  kable(align = "c") %>% 
+  kable(align = "c", format = "markdown") %>% 
   kable_styling(bootstrap_options = c("striped", "hover"), 
                 full_width = TRUE) %>%
   scroll_box(width = "600px", height = "600px")
@@ -592,7 +594,7 @@ lorenz_out_repl <- lorenz_out_repl %>%
 
 ```{r}
 head(lorenz_out_repl, 200) %>% 
-  kable(align = "c") %>% 
+  kable(align = "c", format = "markdown") %>% 
   kable_styling(bootstrap_options = c("striped", "hover"), 
                 full_width = TRUE) %>%
   scroll_box(width = "600px", height = "600px")
