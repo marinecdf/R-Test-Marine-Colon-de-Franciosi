@@ -1,0 +1,735 @@
+---
+title: "R-Test"
+author: "Marine de Franciosi"
+---
+
+# Loading packages and data
+
+```{r}
+pacman::p_load(tidyverse, readr, waldo,
+               skimr, data.table, matrixStats, 
+               labelled, testit, ggthemes, purrr, 
+               kableExtra)
+```
+
+Loading dataset as instructed:
+
+```{r}
+tag      <- "202311081903"
+base_url <- "https://github.com/randrescastaneda/pub_data/raw/"
+data_url <- paste0(base_url, tag, "/data/Rtest1/")
+
+wdi <- readr::read_rds(paste0(data_url, "wdi_in1.Rds"))
+
+#install.packages("DescTools")
+# first taking a glimpse at the dataset: 
+dim(wdi) # number of observations and variables 
+
+glimpse(wdi)
+skimr::skim(wdi)
+
+# from a glance at the dataset, it would seem country and date uniquely identify observations
+
+```
+
+# Basic Stats
+
+## 1. Replicating Summary Table of GDP per capita by region (from 1990 to 2021)
+
+```{r}
+# Let's summarize the wdi dataset and display main statistics for the GDP per capita variable:
+# statistics should be population-weighted as instructed: 
+
+# using dplyr syntax: 
+wdi_summ_out_repl <- wdi %>% 
+ # filter(!is.na(gdp)) %>%    # removing missing GDP values
+  group_by(region, date) %>% # grouping by region and year
+  rename(year = date) %>%    # renaming date as year variable
+  summarise(N = n(),
+            Mean = stats::weighted.mean(gdp, pop, na.rm = TRUE),
+            SD =  matrixStats::weightedSd(x = gdp, w = pop, na.rm = TRUE), 
+            Min = min(gdp, na.rm = TRUE), 
+            Max = max(gdp, na.rm = TRUE)) 
+
+```
+
+**displaying dataset**:
+
+```{r}
+wdi_summ_out_repl %>% 
+  kable(align = "c") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = TRUE) %>%
+  scroll_box(width = "600px", height = "600px")
+```
+
+comparing datasets:
+
+```{r}
+# loading data to replicate for comparison: 
+wdi_summ_out <- readr::read_rds(paste0(data_url, "wdi_summ_out.Rds"))
+
+waldo::compare(wdi_summ_out, wdi_summ_out_repl)
+
+
+
+```
+
+The two datasets are similar. Differences pointed out by compare() function come down to minor differences after several decimal places.
+
+## 2. Replicate Aggregate Stats:
+
+```{r}
+# for loop for each variable? 
+
+wdi_agg <- wdi %>% 
+  group_by(region, date) %>% # grouping by region and year
+  summarise(
+            # Life Expectancy
+            mean_lifeex = stats::weighted.mean(lifeex, pop, na.rm = TRUE),
+            sd_lifeex =  matrixStats::weightedSd(x = lifeex, w = pop, na.rm = TRUE), 
+            min_lifeex = min(lifeex, na.rm = TRUE), 
+            max_lifeex = max(lifeex, na.rm = TRUE),
+            median_lifeex = matrixStats::weightedMedian(x = lifeex, w = pop, na.rm = TRUE),
+            # GDP 
+            mean_gdp = stats::weighted.mean(gdp, pop, na.rm = TRUE),
+            sd_gdp =  matrixStats::weightedSd(x = gdp, w = pop, na.rm = TRUE), 
+            min_gdp = min(gdp, na.rm = TRUE), 
+            max_gdp = max(gdp, na.rm = TRUE),
+            median_gdp = matrixStats::weightedMedian(x = gdp, w = pop, na.rm = TRUE), 
+            # Poverty
+            mean_povintl = stats::weighted.mean(pov_intl, pop, na.rm = TRUE),
+            sd_povintl =  matrixStats::weightedSd(x = pov_intl, w = pop, na.rm = TRUE), 
+            min_povintl = min(pov_intl, na.rm = TRUE), 
+            max_povintl = max(pov_intl, na.rm = TRUE),
+            median_povintl = matrixStats::weightedMedian(x = pov_intl, w = pop, na.rm = TRUE),
+            # Total Population in Each Region by Year:
+            tot_pop = sum(pop, na.rm = TRUE)
+            )
+
+
+# Now we use pivot_longer() and pivot_wider() functions to transform the data from wide to long format: 
+
+wdi_agg_out_repl <- wdi_agg %>% 
+  
+  pivot_longer(-c(region, date, tot_pop))  %>% 
+  # we first gather all aggregate statistics into one "value" column with their corresponding 'name" variable taking values such as "mean_gdp" or median_lifeex". 
+  
+  separate(name, into = c("estimate", "variable"), sep = "_") %>% 
+  # using the "_" separator, we break two the character variable "name" into two components: the estimate component (mean, sd, min, max, median) and the "variable" component corresponding to the specific variable in consideration: gdp, lifeex, povintl
+  
+   pivot_wider(names_from = "variable", values_from = "value")
+ # finally we use pivot_wider() spreading the "variable" column into three columns: gdp, lifeex and povintl
+
+
+# renaming variables and ordering dataset
+wdi_agg_out_repl <- wdi_agg_out_repl %>% 
+  relocate(estimate, .before = region) %>% 
+  rename(pop = tot_pop, 
+         pov_intl = povintl) %>% 
+  mutate(estimate = factor(estimate, levels = (c("mean", "sd", "min", "max", "median")))) %>%  
+  arrange(estimate)
+  
+# labeling variables 
+labelled::var_label(wdi_agg_out_repl) <- 
+  list(estimate = "estimate",
+       region = "region",
+       date = "year", 
+       pop = "Population, total", 
+       lifeex = "Life expectancy at birth, total (years)", 
+       gdp = "GDP per capita, PPP (constant 2017 international $)", 
+       pov_intl = "Poverty headcount at $2.15 (2017 prices)")
+
+
+```
+
+**Displaying dataset**:
+
+```{r}
+head(wdi_agg_out_repl, 100) %>% 
+  kable(align = "c") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = TRUE) %>%
+  scroll_box(width = "600px", height = "600px")
+```
+
+**Comparing Datasets:**
+
+```{r}
+# loading dataset to replication for comparison: 
+wdi_agg_out <- readr::read_rds(paste0(data_url, "wdi_agg_out.Rds"))
+
+
+waldo::compare(wdi_agg_out, wdi_agg_out_repl)
+  
+
+```
+
+Minor differences due to decimal places once again.
+
+## 3. Find Outliers:
+
+```{r}
+
+wdi_outliers_thresholds <- wdi %>%  
+  
+  group_by(date) %>% 
+  
+  summarise(
+            # Life Expectancy
+            mean_lifeex = weighted.mean(x = lifeex, w = pop, na.rm = TRUE), 
+            sd_lifeex = matrixStats::weightedSd(x = lifeex, w = pop, na.rm = TRUE), 
+            # lower threshold below which value is an outlier
+            lower_thresh_lifeex = mean_lifeex - 2.5 * sd_lifeex,
+            # upper threshold above which value is an outlier 
+            upper_thresh_lifeex = mean_lifeex + 2.5 * sd_lifeex, 
+            
+            # GDP
+            mean_gdp = weighted.mean(x = gdp, w = pop, na.rm = TRUE), 
+            sd_gdp = matrixStats::weightedSd(x = gdp, w = pop, na.rm = TRUE), 
+            # lower threshold below which value is an outlier
+            lower_thresh_gdp = mean_gdp - 2.5 * sd_gdp,
+            # upper threshold above which value is an outlier 
+            upper_thresh_gdp = mean_gdp + 2.5 * sd_gdp, 
+            
+            # Gini 
+            mean_gini = weighted.mean(x = gini, w = pop, na.rm = TRUE), 
+            sd_gini = matrixStats::weightedSd(x = gini, w = pop, na.rm = TRUE), 
+            # lower threshold below which value is an outlier
+            lower_thresh_gini = mean_gini - 2.5 * sd_gini,
+            # upper threshold above which value is an outlier
+            upper_thresh_gini = mean_gini + 2.5 * sd_gini
+            )
+
+
+# now we can merge the aggregate statistics and outlier thresholds by year with the original wdi datasets to determine which observations are outliers according to the criteria given in the exercise: 
+wdi_outliers_out_repl <- merge(x = wdi, y = wdi_outliers_thresholds, by = "date")
+
+# creating boolean variables determining whether an observation is an outlier (low or high)
+wdi_outliers_out_repl <- wdi_outliers_out_repl %>% 
+  
+  mutate(
+         # Life Expectancy 
+         ll_lifeex = lifeex < lower_thresh_lifeex, 
+         hl_lifeex = lifeex > upper_thresh_lifeex, 
+         # GDP
+         ll_gdp = gdp < lower_thresh_gdp, 
+         hl_gdp = gdp > upper_thresh_gdp,
+         # Gini
+         ll_gini = gini < lower_thresh_gini,
+         hl_gini = gini > upper_thresh_gini)
+
+
+# ordering variables and observations 
+wdi_outliers_out_repl <- wdi_outliers_out_repl %>% 
+  relocate(ll_lifeex, .before = mean_gdp) %>% 
+  relocate(hl_lifeex, .after = ll_lifeex) %>% 
+  relocate(ll_gdp, .before = mean_gini) %>% 
+  relocate(hl_gdp, .after = ll_gdp) %>% 
+  arrange(country)
+
+
+
+```
+
+**Displaying dataset**:
+
+```{r}
+head(wdi_outliers_out_repl, 200) %>% 
+  kable(align = "c") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = TRUE) %>%
+  scroll_box(width = "600px", height = "600px")
+```
+
+Comparison with data to replicate:
+
+```{r}
+
+# data to replicate 
+wdi_outliers_out <- readr::read_rds(paste0(data_url, "wdi_outliers_out.Rds"))
+
+# arrranging by country for comparison purposes:
+wdi_outliers_out <- wdi_outliers_out %>% 
+  arrange(country)
+
+# asserting outlier detection is the same in both datasets: 
+# if not, then an error message will appear
+
+# for Life Expectancy
+message_l <- "Lower outlier detection for life expectancy is not the same in both datasets"
+message_h <- "Higher outlier detection for life expectancy is not the same in both datasets"
+
+testit::assert(message_l, 
+               sum(wdi_outliers_out_repl$ll_lifeex != wdi_outliers_out$ll_lifeex, na.rm = TRUE) == 0) 
+
+testit::assert(message_h, 
+               sum(wdi_outliers_out_repl$hl_lifeex != wdi_outliers_out$hl_lifeex, na.rm = TRUE) == 0) 
+
+# For GDP
+testit::assert(message_l, 
+               sum(wdi_outliers_out_repl$ll_gdp != wdi_outliers_out$ll_gdp, na.rm = TRUE) == 0) 
+
+testit::assert(message_h, 
+               sum(wdi_outliers_out_repl$hl_gdp != wdi_outliers_out$hl_gdp, na.rm = TRUE) == 0) 
+
+# For Gini coefficient: 
+testit::assert(message_l, 
+               sum(wdi_outliers_out_repl$ll_gini != wdi_outliers_out$ll_gini, na.rm = TRUE) == 0) 
+
+testit::assert(message_h, 
+               sum(wdi_outliers_out_repl$hl_gini != wdi_outliers_out$hl_gini, na.rm = TRUE) == 0) 
+```
+
+Replicating outlier figure using ggplot package:
+
+```{r}
+ggplot(
+      # dataset and x and y variables for line representing weighted mean life expectancy
+      wdi_outliers_out_repl, aes(x = date, y = mean_lifeex)) + 
+      # titles and aesthetics
+      ggtitle("Life Expectancy 1990-2021 - Visualizing Trend and Outliers") +
+      theme_pander() +
+      scale_x_continuous(name = "Year", breaks = seq(1990, 2021, 5)) +
+      scale_y_continuous(name = "Life Expectancy", breaks = seq(20, 80, 20)) +
+
+      # adding data points colored by region
+      geom_point(data = wdi_outliers_out_repl,
+                 aes(x  = date, y = lifeex, color = factor(region)), 
+                 size = 0.6) +
+      # adding line representing the population-weighted mean over the years
+      geom_line(linewidth = 0.4, color = "blue") + 
+      # adding 2.5sd confidence interval
+      geom_ribbon(aes(ymin = lower_thresh_lifeex, ymax = upper_thresh_lifeex),
+                  alpha = 0.2) +
+      
+  # formatting title, axis titles and legend
+   theme(plot.title = element_text(color = "dark blue", size = 13, face = "bold", hjust = 0.5),
+         axis.title.x = element_text(color = "midnightblue", size = 10, face = "bold", hjust = 0.5), 
+         axis.title.y = element_text(color = "midnightblue", size = 10, face = "bold", vjust = 0.5), 
+         axis.text.x = element_text(color = "midnightblue", size = 9), 
+         axis.text.y = element_text(color = "midnightblue", size = 9), 
+         legend.position = c(0.5, 0.2), 
+         legend.direction = "horizontal",
+         legend.background=element_blank(),
+         legend.title = element_blank(),
+         legend.text = element_text(color = "midnightblue", size = 8))
+```
+
+# Simulated Data
+
+## 4. Poverty Measures:
+
+Loading data as instructed
+
+```{r}
+l_svy <-readr::read_rds(paste0(data_url, "svy_sim_in1.Rds"))
+
+glimpse(l_svy)
+
+# this R object is a list with each element corresponding to a simulated household dataset for each year from 2001 to 2010
+# each dataset contains the same variables
+
+```
+
+:
+
+```{r}
+
+# Let's bind all the dataframe elements of the list into one dataframe using the bind_rows() function from dplyr: 
+l_svy_df <- bind_rows(l_svy, .id = "year")
+
+# cleaning up year variable: 
+l_svy_df$year <- gsub('Y','', l_svy_df$year) 
+l_svy_df$year <- as.numeric(l_svy_df$year)
+
+
+# calculating povery headcount, by year and for each poverty line: 
+pov_out <- l_svy_df %>% 
+  
+  group_by(year) %>% 
+  
+  mutate(
+        # defining poverty dummy according to poverty lines
+         poor215  = income < 2.15, 
+         poor365 = income < 3.65, 
+         poor685 = income < 6.85, 
+         
+         # poverty headcount:
+         headcount_215 = sum(poor215 * weight) / sum(weight), 
+         headcount_365 = sum(poor365 * weight) / sum(weight), 
+         headcount_685 = sum(poor685 * weight) / sum(weight), 
+         
+         # poverty gap: 
+           # first calculating "gap" part of the eqution
+         gap215 = ((2.15-income) * poor215) / 2.15,
+         gap365 = ((3.65-income) * poor365) / 3.65,
+         gap685 = ((6.85-income) * poor685) / 6.85,
+           # aggregating with weights: 
+         povgap_215 = sum(gap215 * weight) / sum(weight), 
+         povgap_365 = sum(gap365 * weight) / sum(weight),
+         povgap_685 = sum(gap685 * weight) / sum(weight),
+         
+         # poverty severity: similar formula as poverty gap with gap^2 
+         povseverity_215 = sum(gap215^2 * weight)/sum(weight), 
+         povseverity_365 = sum(gap365^2 * weight)/sum(weight),
+         povseverity_685 = sum(gap685^2 * weight)/sum(weight)
+         ) %>%  
+  
+  # keeping variables of interest only
+  select(year, headcount_215, headcount_365, headcount_685, 
+         povgap_215, povgap_365, povgap_685, povseverity_215, 
+         povseverity_365, povseverity_685) %>%  
+  
+  # removing duplicates: 
+  distinct()
+
+# now transforming dataset from wide to long: 
+pov_out_repl <- pov_out %>% 
+      # first gather aggregate statistic into one "value" column 
+      pivot_longer(-year) %>% 
+      # separating name variable to facilitate pivot_wider() operation below
+      separate(name, into = c("measure", "pov_line"), sep = "_") %>% 
+      # reshaping from long to wide for desired dataset format
+      pivot_wider(names_from = "measure", values_from = "value") %>% 
+      # cleaning pov_line variable
+      mutate(pov_line = as.numeric(pov_line)/100)
+  
+```
+
+**Displaying dataset**:
+
+```{r}
+pov_out_repl %>% 
+  kable(align = "c") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = TRUE) %>%
+  scroll_box(width = "600px", height = "600px")
+```
+
+**Loading data to replicate for comparisons:**
+
+```{r}
+pov_out <- readr::read_rds(paste0(data_url, "dt_pov_out.Rds"))
+
+# comparison using compare() function from waldo package: 
+waldo::compare(pov_out, pov_out_repl)
+
+
+```
+
+Once again insignificant differences after many decimal places
+
+```{r}
+# rounding measures for comparison purposes
+
+decimal <- 10
+
+pov_out$headcount <- round(pov_out$headcount, decimal)
+pov_out_repl$headcount <- round(pov_out_repl$headcount, decimal)
+
+pov_out$povgap <- round(pov_out$povgap, decimal)
+pov_out_repl$povgap <- round(pov_out_repl$povgap, decimal)
+
+pov_out$povseverity <- round(pov_out$povseverity, decimal)
+pov_out_repl$povseverity <- round(pov_out_repl$povseverity, decimal)
+
+# The following three statements should be true
+sum(pov_out$headcount != pov_out_repl$headcount) == 0
+sum(pov_out$povgap != pov_out_repl$povgap) == 0
+sum(pov_out$povseverity != pov_out_repl$povseverity) == 0
+```
+
+**Replicating Poverty Headcount Figure:**
+
+```{r}
+ggplot(
+      # dataset and x and y variables for line and data point
+      pov_out_repl, aes(x = year, y = headcount, color = factor(pov_line))) + 
+      # titles and aesthetics
+      ggtitle("Poverty Headcount 2001-2010 - 3 Poverty Lines") +
+      theme_pander() +
+      scale_x_continuous(name = "Year", breaks = seq(2001, 2010, 1)) +
+      scale_y_continuous(name = "Poverty Headcount", breaks = seq(0, 0.8, 0.2)) +
+
+      # adding data points colored by poverty line
+      geom_point(size = 0.7) +
+      # adding line colored by poverty line 
+      geom_line(linewidth = 0.5) +
+
+  # formatting title, axis titles and legend
+   theme(plot.title = element_text(color = "dark blue", size = 13, face = "bold", hjust = 0.5),
+         axis.title.x = element_text(color = "midnightblue", size = 10, face = "bold", hjust = 0.5), 
+         axis.title.y = element_text(color = "midnightblue", size = 10, face = "bold", vjust = 0.5), 
+         axis.text.x = element_text(color = "midnightblue", size = 9), 
+         axis.text.y = element_text(color = "midnightblue", size = 9), 
+         legend.position = "bottom", 
+         legend.direction = "horizontal",
+         legend.background=element_blank(),
+         legend.title = element_blank(),
+         legend.text = element_text(color = "midnightblue", size = 8))
+```
+
+## 5. Lorenz Curve:
+
+**Function:**
+
+```{r}
+# Creating function to calculate Lorenz curve variables: 
+
+lorenz_function <- function(data, date_year) {
+
+# we need to calculate the cumulative income and the cumulative population for each percentile bins 
+# we can use a for loop over each observation to calculate the cumulated income and population
+
+# filtering year in which to calculate Lorenz curve variable: 
+data <- data %>% 
+  filter(year == date_year)
+
+
+# defining variables
+
+# 1. number of observations:
+N <- length(data$weight)
+
+# 2. weighted income
+income_w <- data$income * data$weight 
+# this will be added cumulatively to each observation
+
+# 3. weight 
+weight <- data$weight
+
+# 4. number representing the weighted population in each of the 100 percentiles
+pop_p_threshold <- sum(data$weight) / 100
+# create a second object that will be updated at each percentile throughout loop: 
+pop_p_threshold_update <- pop_p_threshold 
+# this number will be updated by increments of itself at each percentile
+
+# 5. starting points: 
+
+  # we start at 0 for cumulative weighted population and culumative income 
+  cum_weighted_pop <- 0
+  cum_income <- 0
+  
+  # we first at the first percentile p 
+  p <- 1 
+
+# 6. empty objects in which cumulative values will be calculated: 
+# they should have 100 elements representing each percentile
+  population_cumulative <- vector(mode = "numeric", length = 100)
+  income_cumulative <- vector(mode = "numeric", length = 100)
+
+  
+# start of for-loop: 
+# looping over each observation in dataset
+  
+for (i in 1:N) {
+  # we add weight and weighted income values step by step (observation by observation)
+  cum_weighted_pop <- cum_weighted_pop + weight[i] 
+  cum_income <- cum_income + income_w[i]
+
+# while loop: 2 conditions
+  
+  while ((p <= 100) & (cum_weighted_pop >= pop_p_threshold_update)) {
+    
+    # we specify that the loop just run until the percentile p=100 is reached. 
+    # keep going as long as cumulative weighted pop is still less or equal to the weighted 
+    # population in each percentile 
+    # at some point, we will reach the threshold where we switch from one percentile to the        next
+    # we update this variable 
+    # we record the cumulative income and population expressed as shares: 
+    
+     income_cumulative[p] = cum_income / sum(income_w)
+     population_cumulative[p] = cum_weighted_pop / sum(weight)
+
+     # we switch to the next percentile 
+     p = p + 1
+     
+    if (p <= 100) {
+    # if we haven't reached the last percentile
+      
+    # update the threshold value between percentile 
+        pop_p_threshold_update <- pop_p_threshold * p
+      } # close if loop
+     
+ } # close while loop 
+
+} # close for loop 
+  
+    lorenz_vars <- data.frame(cum_population = population_cumulative,
+                              cum_welfare = income_cumulative, 
+                              year = date_year, 
+                              bin = 1:100) 
+    
+    
+  return(lorenz_vars)
+    
+  } # close function
+  
+
+```
+
+**Applying Lorenz Function created:**
+
+```{r}
+# applying function
+lorenz_list <- vector(mode='list', length = 10)
+
+  for (i in 1:10){
+ lorenz_list[[i]] <- lorenz_function(data = l_svy_df, date_year = 2000 + i)
+}
+
+lorenz_out_repl <- bind_rows(lorenz_list, .id = "year")
+
+lorenz_out_repl <- lorenz_out_repl %>% 
+  mutate(year = 2000 + as.numeric(year)) %>% # cleaning year variable
+  relocate(cum_welfare, .before = cum_population)
+
+
+```
+
+**Displaying dataset**:
+
+```{r}
+head(lorenz_out_repl, 200) %>% 
+  kable(align = "c") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = TRUE) %>%
+  scroll_box(width = "600px", height = "600px")
+```
+
+**Comparing Datasets:**
+
+```{r}
+lorenz_out <- readr::read_rds(paste0(data_url, "dt_lorenz_out.Rds"))
+
+waldo::compare(lorenz_out, lorenz_out_repl)
+
+```
+
+Some minor differences after several decimal places
+
+**Replicating Lorenz Curve** Graph
+
+```{r}
+ggplot(
+      # dataset and x and y variables for line and data point
+      lorenz_out_repl, aes(x = cum_population, y = cum_welfare, color = factor(year))) + 
+      # titles and aesthetics
+      ggtitle("Lorenz Curve 2001-2010") +
+      theme_pander() +
+      scale_x_continuous(name = "Cumulative Population", breaks = seq(0, 1, 0.25)) +
+      scale_y_continuous(name = "Cumulative Welfare", breaks = seq(0, 1, 0.25)) +
+
+      # adding line colored by poverty line 
+      geom_line(linewidth = 0.5) +
+
+  # formatting title, axis titles and legend
+   theme(plot.title = element_text(color = "dark blue", size = 13, face = "bold", hjust = 0.5),
+         axis.title.x = element_text(color = "midnightblue", size = 10, face = "bold", hjust = 0.5), 
+         axis.title.y = element_text(color = "midnightblue", size = 10, face = "bold", vjust = 0.5), 
+         axis.text.x = element_text(color = "midnightblue", size = 9), 
+         axis.text.y = element_text(color = "midnightblue", size = 9), 
+         legend.position = "bottom", 
+         legend.direction = "horizontal",
+         legend.background=element_blank(),
+         legend.title = element_blank(),
+         legend.text = element_text(color = "midnightblue", size = 8))
+```
+
+## 6. Gini Coefficient:
+
+**Create function to calculate Gini coefficient:**
+
+```{r}
+# Making use of formula provided on wikipedia page: 
+# a = area above the curve 
+# b = area under the curve 
+
+# Gini = a / (a + b) 
+# (0,1) axis on both sides so areas a + b form triangle area = 1/2
+
+# gini formila = 1 - 2b
+# need to calculate area under the curve b
+
+
+gini_function <- function(data, date_year) {
+  
+  data <- data %>% 
+    filter(year == date_year)
+
+
+income_w <- data$weight * data$income
+weight <- data$weight 
+
+ # attempting to compute area under the curve: 
+# formula for calculating the area: base x height: 
+area_b <- sum((cumsum(income_w) + (income_w / 2)) * weight) 
+gini <- 1 - (2 * area_b)
+
+gini_df <- data.frame(year = date_year, 
+                     gini = gini)
+
+return(gini_df)
+
+}
+
+
+```
+
+```{r}
+gini_list <- vector(mode='list', length = 10)
+
+  for (i in 1:10){
+ gini_list[[i]] <- gini_function(data = l_svy_df, date_year = 2000 + i)
+}
+
+gini_out_repl <- bind_rows(gini_list, .id = "year")
+
+gini_out_repl <- gini_out_repl %>% 
+  mutate(year = 2000 + as.numeric(year))  # cleaning year variable
+
+
+```
+
+```{r}
+gini_out <- readr::read_rds(paste0(data_url, "dt_gini_out.Rds"))
+
+waldo::compare(gini_out, gini_out_repl)
+```
+
+I didn't manage to replicate the gini coefficient values.
+
+In fact, the values are negative which indicates the formula is clearly not right but I couldn't find the correct solution.
+
+**replicating figure**:
+
+```{r}
+ggplot(
+      # dataset and x and y variables for line and data point
+      gini_out, aes(x = year, y = gini)) + 
+      # titles and aesthetics
+      ggtitle("Gini Coefficient 2001-2010") +
+      theme_pander() +
+      scale_x_continuous(name = "Year", breaks = seq(2001, 2010, 2)) +
+      scale_y_continuous(name = "Cumulative Welfare", breaks = seq(0.3, 0.7, 0.1)) +
+
+      # adding line colored by poverty line 
+      geom_line(linewidth = 0.5) +
+      # adding data points: 
+      geom_point(size = 0.5) + 
+
+  # formatting title, axis titles and legend
+   theme(plot.title = element_text(color = "dark blue", size = 13, face = "bold", hjust = 0.5),
+         axis.title.x = element_text(color = "midnightblue", size = 10, face = "bold", hjust = 0.5), 
+         axis.title.y = element_text(color = "midnightblue", size = 10, face = "bold", vjust = 0.5), 
+         axis.text.x = element_text(color = "midnightblue", size = 9), 
+         axis.text.y = element_text(color = "midnightblue", size = 9), 
+         legend.position = "bottom", 
+         legend.direction = "horizontal",
+         legend.background=element_blank(),
+         legend.title = element_blank(),
+         legend.text = element_text(color = "midnightblue", size = 8))
+```
+
+Thank you for taking the time to review and assess my code.
