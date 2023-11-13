@@ -55,14 +55,11 @@ wdi_summ_out_repl <- wdi %>%
 
 ```
 
-**displaying dataset**:
+**displaying head of dataset**:
 
 ```{r}
-wdi_summ_out_repl %>% 
-  kable(align = "c", format = "markdown") %>% 
-  kable_styling(bootstrap_options = c("striped", "hover"), 
-                full_width = TRUE) %>%
-  scroll_box(width = "600px", height = "600px")
+head(wdi_summ_out_repl, 50) %>% 
+  kable(align = "c", format = "markdown") 
 ```
 
 comparing datasets:
@@ -72,9 +69,6 @@ comparing datasets:
 wdi_summ_out <- readr::read_rds(paste0(data_url, "wdi_summ_out.Rds"))
 
 waldo::compare(wdi_summ_out, wdi_summ_out_repl)
-
-
-
 ```
 
 The two datasets are similar. Differences pointed out by compare() function come down to minor differences after several decimal places.
@@ -145,10 +139,10 @@ labelled::var_label(wdi_agg_out_repl) <-
 
 ```
 
-**Displaying dataset**:
+**Displaying head of dataset**:
 
 ```{r}
-head(wdi_agg_out_repl, 100) %>% 
+head(wdi_agg_out_repl, 50) %>% 
   kable(align = "c", format = "markdown") %>% 
   kable_styling(bootstrap_options = c("striped", "hover"), 
                 full_width = TRUE) %>%
@@ -234,14 +228,12 @@ wdi_outliers_out_repl <- wdi_outliers_out_repl %>%
 
 ```
 
-**Displaying dataset**:
+**Displaying  head of dataset**:
 
 ```{r}
-head(wdi_outliers_out_repl, 200) %>% 
-  kable(align = "c", format = "markdown") %>% 
-  kable_styling(bootstrap_options = c("striped", "hover"), 
-                full_width = TRUE) %>%
-  scroll_box(width = "600px", height = "600px")
+head(wdi_outliers_out_repl, 50) %>% 
+  kable(align = "c", format = "markdown")
+
 ```
 
 Comparison with data to replicate:
@@ -403,10 +395,7 @@ pov_out_repl <- pov_out %>%
 
 ```{r}
 pov_out_repl %>% 
-  kable(align = "c", format = "markdown") %>% 
-  kable_styling(bootstrap_options = c("striped", "hover"), 
-                full_width = TRUE) %>%
-  scroll_box(width = "600px", height = "600px")
+  kable(align = "c", format = "markdown")
 ```
 
 **Loading data to replicate for comparisons:**
@@ -590,14 +579,11 @@ lorenz_out_repl <- lorenz_out_repl %>%
 
 ```
 
-**Displaying dataset**:
+**Displaying  head of dataset**:
 
 ```{r}
-head(lorenz_out_repl, 200) %>% 
-  kable(align = "c", format = "markdown") %>% 
-  kable_styling(bootstrap_options = c("striped", "hover"), 
-                full_width = TRUE) %>%
-  scroll_box(width = "600px", height = "600px")
+head(lorenz_out_repl, 50) %>% 
+  kable(align = "c", format = "markdown")
 ```
 
 **Comparing Datasets:**
@@ -611,7 +597,7 @@ waldo::compare(lorenz_out, lorenz_out_repl)
 
 Some minor differences after several decimal places
 
-**Replicating Lorenz Curve** Graph
+**Replicating Lorenz Curve Graph:**
 
 ```{r}
 ggplot(
@@ -694,6 +680,7 @@ gini_out_repl <- gini_out_repl %>%
 
 ```
 
+
 ```{r}
 gini_out <- readr::read_rds(paste0(data_url, "dt_gini_out.Rds"))
 
@@ -733,5 +720,6 @@ ggplot(
          legend.title = element_blank(),
          legend.text = element_text(color = "midnightblue", size = 8))
 ```
+
 
 Thank you for taking the time to review and assess my code.
