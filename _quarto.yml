@@ -1,5 +1,15 @@
 project:
-  title: "R-Test"
+  type: website
+  output-dir: docs
+  
+website: 
+  title: "R-Test Marine de Franciosi"
+
 
 editor: visual
+
+format:
+ html: 
+  theme: cosmo
+  toc: true
 

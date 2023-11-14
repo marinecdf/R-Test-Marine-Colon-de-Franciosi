@@ -2,7 +2,6 @@
 title: "R-Test"
 author: "Marine de Franciosi"
 date:   "11/09/2023"
-format: gfm
 ---
 
 # Loading packages and data
@@ -11,7 +10,7 @@ format: gfm
 pacman::p_load(tidyverse, readr, waldo,
                skimr, data.table, matrixStats, 
                labelled, testit, ggthemes, purrr, 
-               kableExtra, knitr)
+               kableExtra, knitr, labelled)
 ```
 
 Loading dataset as instructed:
@@ -58,8 +57,11 @@ wdi_summ_out_repl <- wdi %>%
 **displaying head of dataset**:
 
 ```{r}
-head(wdi_summ_out_repl, 50) %>% 
-  kable(align = "c", format = "markdown") 
+wdi_summ_out_repl %>% 
+    kable(align = "c") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = TRUE) %>%
+  scroll_box(width = "600px", height = "600px")
 ```
 
 comparing datasets:
@@ -142,8 +144,8 @@ labelled::var_label(wdi_agg_out_repl) <-
 **Displaying head of dataset**:
 
 ```{r}
-head(wdi_agg_out_repl, 50) %>% 
-  kable(align = "c", format = "markdown") %>% 
+wdi_agg_out_repl %>% 
+  kable(align = "c") %>% 
   kable_styling(bootstrap_options = c("striped", "hover"), 
                 full_width = TRUE) %>%
   scroll_box(width = "600px", height = "600px")
@@ -228,11 +230,14 @@ wdi_outliers_out_repl <- wdi_outliers_out_repl %>%
 
 ```
 
-**Displaying  head of dataset**:
+**Displaying head of dataset**:
 
 ```{r}
-head(wdi_outliers_out_repl, 50) %>% 
-  kable(align = "c", format = "markdown")
+wdi_outliers_out_repl %>% 
+  kable(align = "c") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = TRUE) %>%
+  scroll_box(width = "600px", height = "600px")
 
 ```
 
@@ -395,7 +400,10 @@ pov_out_repl <- pov_out %>%
 
 ```{r}
 pov_out_repl %>% 
-  kable(align = "c", format = "markdown")
+   kable(align = "c") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = TRUE) %>%
+  scroll_box(width = "600px", height = "600px")
 ```
 
 **Loading data to replicate for comparisons:**
@@ -579,11 +587,14 @@ lorenz_out_repl <- lorenz_out_repl %>%
 
 ```
 
-**Displaying  head of dataset**:
+**Displaying head of dataset**:
 
 ```{r}
-head(lorenz_out_repl, 50) %>% 
-  kable(align = "c", format = "markdown")
+ lorenz_out_repl %>% 
+  kable(align = "c") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = TRUE) %>%
+  scroll_box(width = "600px", height = "600px")
 ```
 
 **Comparing Datasets:**
@@ -680,7 +691,6 @@ gini_out_repl <- gini_out_repl %>%
 
 ```
 
-
 ```{r}
 gini_out <- readr::read_rds(paste0(data_url, "dt_gini_out.Rds"))
 
@@ -720,6 +730,5 @@ ggplot(
          legend.title = element_blank(),
          legend.text = element_text(color = "midnightblue", size = 8))
 ```
-
 
 Thank you for taking the time to review and assess my code.
