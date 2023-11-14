@@ -1,12 +1,12 @@
 ---
 title: "R-Test"
 author: "Marine de Franciosi"
-date:   "11/09/2023"
+date:   "11/12/2023"
 ---
 
 # Loading packages and data
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 pacman::p_load(tidyverse, readr, waldo,
                skimr, data.table, matrixStats, 
                labelled, testit, ggthemes, purrr, 
